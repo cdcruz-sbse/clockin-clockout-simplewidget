@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clock In / Out</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;1,9..40,300&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0e0f11;
+    --card: #161719;
+    --card-border: #232529;
+    --text-primary: #f0f0f2;
+    --text-secondary: #7a7d85;
+    --accent-in: #34d399;
+    --accent-in-dim: rgba(52, 211, 153, .12);
+    --accent-out: #f87171;
+    --accent-out-dim: rgba(248, 113, 113, .12);
+    --radius: 20px;
+    --transition: .35s cubic-bezier(.4, 0, .2, 1);
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text-primary);
+    min-height: 100dvh;
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+    overflow: hidden;
+  }
+
+  /* ambient glow behind card */
+  body::before {
+    content: '';
+    position: fixed;
+    width: 420px; height: 420px;
+    border-radius: 50%;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(circle, rgba(52,211,153,.06) 0%, transparent 70%);
+    pointer-events: none;
+    transition: background var(--transition);
+    z-index: 0;
+  }
+  body.clocked-in::before {
+    background: radial-gradient(circle, rgba(52,211,153,.10) 0%, transparent 70%);
+  }
+  body.clocked-out::before {
+    background: radial-gradient(circle, rgba(248,113,113,.08) 0%, transparent 70%);
+  }
+
+  /* ---- CARD ---- */
+  .card {
+    position: relative;
+    width: 100%;
+    max-width: 380px;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.5rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .9rem;
+    animation: fadeUp .6s ease both;
+    z-index: 1;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+
+  /* ---- CLOCK ---- */
+  .clock {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 2.25rem;
+    font-weight: 500;
+    letter-spacing: -.02em;
+    line-height: 1;
+    color: var(--text-primary);
+  }
+  .clock .seconds {
+    font-size: .9rem;
+    color: var(--text-secondary);
+    vertical-align: super;
+    margin-left: 2px;
+  }
+  .date-line {
+    font-size: .78rem;
+    color: var(--text-secondary);
+    margin-top: .25rem;
+    font-weight: 300;
+    letter-spacing: .03em;
+  }
+
+  /* ---- STATUS PILL ---- */
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    padding: .4rem 1rem;
+    border-radius: 100px;
+    font-size: .75rem;
+    font-weight: 500;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    transition: background var(--transition), color var(--transition);
+  }
+  .status-pill .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    transition: background var(--transition), box-shadow var(--transition);
+  }
+
+  .status-pill[data-status="out"] {
+    background: var(--accent-out-dim);
+    color: var(--accent-out);
+  }
+  .status-pill[data-status="out"] .dot {
+    background: var(--accent-out);
+  }
+  .status-pill[data-status="in"] {
+    background: var(--accent-in-dim);
+    color: var(--accent-in);
+  }
+  .status-pill[data-status="in"] .dot {
+    background: var(--accent-in);
+    box-shadow: 0 0 8px rgba(52,211,153,.5);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 6px rgba(52,211,153,.4); }
+    50%      { box-shadow: 0 0 14px rgba(52,211,153,.7); }
+  }
+
+
+  /* ---- BUTTON ---- */
+  .btn-wrap { width: 100%; }
+  .clock-btn {
+    width: 100%;
+    padding: .7rem;
+    border: none;
+    border-radius: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: .82rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: background var(--transition), color var(--transition), transform .15s ease, box-shadow var(--transition);
+  }
+  .clock-btn:active { transform: scale(.975); }
+
+  .clock-btn[data-action="in"] {
+    background: var(--accent-in);
+    color: #052e1b;
+    box-shadow: 0 4px 24px rgba(52,211,153,.25);
+  }
+  .clock-btn[data-action="in"]:hover {
+    box-shadow: 0 6px 32px rgba(52,211,153,.35);
+  }
+  .clock-btn[data-action="out"] {
+    background: var(--accent-out);
+    color: #3b0a0a;
+    box-shadow: 0 4px 24px rgba(248,113,113,.2);
+  }
+  .clock-btn[data-action="out"]:hover {
+    box-shadow: 0 6px 32px rgba(248,113,113,.3);
+  }
+
+  /* ripple */
+  .clock-btn .ripple {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255,255,255,.3);
+    transform: scale(0);
+    animation: rippleAnim .55s ease-out forwards;
+    pointer-events: none;
+  }
+  @keyframes rippleAnim {
+    to { transform: scale(4); opacity: 0; }
+  }
+
+
+  /* ---- LOADING SPINNER (for API calls) ---- */
+  .spinner {
+    display: none;
+    width: 18px; height: 18px;
+    border: 2px solid rgba(255,255,255,.2);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin .6s linear infinite;
+    margin: 0 auto;
+  }
+  .clock-btn.loading .spinner { display: inline-block; }
+  .clock-btn.loading .btn-label { display: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---- RESPONSIVE ---- */
+  @media (max-width: 400px) {
+    .card { padding: 1rem 1.15rem; gap: .7rem; border-radius: 14px; }
+    .clock { font-size: 1.9rem; }
+    .clock .seconds { font-size: .75rem; }
+    .date-line { font-size: .7rem; }
+    .status-pill { font-size: .68rem; padding: .3rem .75rem; }
+    .clock-btn { padding: .6rem; font-size: .78rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <!-- Live Clock -->
+  <div>
+    <div class="clock" id="liveClock">--:--<span class="seconds">--</span></div>
+    <div class="date-line" id="dateLine"></div>
+  </div>
+
+  <!-- Status Pill -->
+  <div class="status-pill" id="statusPill" data-status="out">
+    <span class="dot"></span>
+    <span id="statusText">Clocked Out</span>
+  </div>
+
+  <!-- Action Button -->
+  <div class="btn-wrap">
+    <button class="clock-btn" id="clockBtn" data-action="in" onclick="handleClock(event)">
+      <span class="btn-label">Clock In</span>
+      <span class="spinner"></span>
+    </button>
+  </div>
+</div>
+
+<script>
+  // ===========================
+  //  STATE
+  // ===========================
+  let isClockedIn = false;
+
+  // ===========================
+  //  DOM REFS
+  // ===========================
+  const liveClock      = document.getElementById('liveClock');
+  const dateLine       = document.getElementById('dateLine');
+  const statusPill     = document.getElementById('statusPill');
+  const statusText     = document.getElementById('statusText');
+  const clockBtn       = document.getElementById('clockBtn');
+
+  // ===========================
+  //  LIVE CLOCK
+  // ===========================
+  function updateClock() {
+    const now = new Date();
+    const h   = now.getHours().toString().padStart(2, '0');
+    const m   = now.getMinutes().toString().padStart(2, '0');
+    const s   = now.getSeconds().toString().padStart(2, '0');
+    liveClock.innerHTML = `${h}:${m}<span class="seconds">${s}</span>`;
+
+    const options = { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' };
+    dateLine.textContent = now.toLocaleDateString('en-US', options);
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  // ===========================
+  //  ELAPSED TIMER
+  // ===========================
+  function updateElapsed() {
+    if (!clockInTime) return;
+    const diff = Date.now() - clockInTime;
+    const hrs  = Math.floor(diff / 3600000).toString().padStart(2, '0');
+    const mins = Math.floor((diff % 3600000) / 60000).toString().padStart(2, '0');
+    const secs = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0');
+    elapsedTime.textContent = `${hrs}:${mins}:${secs}`;
+  }
+
+  // ===========================
+  //  RIPPLE EFFECT
+  // ===========================
+  function createRipple(e) {
+    const btn  = e.currentTarget;
+    const rect = btn.getBoundingClientRect();
+    const ripple = document.createElement('span');
+    ripple.classList.add('ripple');
+    const size = Math.max(rect.width, rect.height);
+    ripple.style.width = ripple.style.height = size + 'px';
+    ripple.style.left  = (e.clientX - rect.left - size / 2) + 'px';
+    ripple.style.top   = (e.clientY - rect.top  - size / 2) + 'px';
+    btn.appendChild(ripple);
+    ripple.addEventListener('animationend', () => ripple.remove());
+  }
+
+  // ===========================
+  //  ADD LOG ENTRY
+  // ===========================
+  function addLogEntry(type) {
+    const now  = new Date();
+    const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+    // clear "no entries" placeholder
+    const empty = logList.querySelector('.log-empty');
+    if (empty) empty.remove();
+
+    const li = document.createElement('li');
+    li.className = 'log-item';
+    li.innerHTML = `
+      <span class="tag ${type}">${type === 'in' ? 'In' : 'Out'}</span>
+      <span class="time-stamp">${time}</span>
+    `;
+    logList.prepend(li);
+  }
+
+  // ===========================
+  //  STAFFBASE API HOOKS
+  //  -------------------------------------------------------
+  //  Replace the placeholder functions below with real
+  //  Staffbase User API calls to add/remove users from
+  //  the "clockin" and "clockout" groups.
+  //
+  //  Think of these hooks like electrical outlets —
+  //  the widget is wired and ready; you just need to
+  //  plug in the actual API cable when the time comes.
+  // ===========================
+
+  /**
+   * Called when the user clocks IN.
+   * TODO: PUT /users/{userId}/groups — add to "clockin" group,
+   *       remove from "clockout" group.
+   */
+  async function staffbaseClockIn(/* userId */) {
+    // Simulate network latency for now
+    return new Promise(resolve => setTimeout(resolve, 600));
+
+    // --- REAL IMPLEMENTATION (example) ---
+    // const API_BASE = 'https://<your-instance>.staffbase.com/api';
+    // const TOKEN    = '<your-api-token>';
+    // const CLOCKIN_GROUP_ID  = '<clockin-group-id>';
+    // const CLOCKOUT_GROUP_ID = '<clockout-group-id>';
+    //
+    // await fetch(`${API_BASE}/groups/${CLOCKIN_GROUP_ID}/members`, {
+    //   method: 'POST',
+    //   headers: { 'Authorization': `Basic ${TOKEN}`, 'Content-Type': 'application/json' },
+    //   body: JSON.stringify({ userIds: [userId] })
+    // });
+    //
+    // await fetch(`${API_BASE}/groups/${CLOCKOUT_GROUP_ID}/members/${userId}`, {
+    //   method: 'DELETE',
+    //   headers: { 'Authorization': `Basic ${TOKEN}` }
+    // });
+  }
+
+  /**
+   * Called when the user clocks OUT.
+   * TODO: PUT /users/{userId}/groups — add to "clockout" group,
+   *       remove from "clockin" group.
+   */
+  async function staffbaseClockOut(/* userId */) {
+    return new Promise(resolve => setTimeout(resolve, 600));
+
+    // --- REAL IMPLEMENTATION (example) ---
+    // await fetch(`${API_BASE}/groups/${CLOCKOUT_GROUP_ID}/members`, {
+    //   method: 'POST',
+    //   headers: { 'Authorization': `Basic ${TOKEN}`, 'Content-Type': 'application/json' },
+    //   body: JSON.stringify({ userIds: [userId] })
+    // });
+    //
+    // await fetch(`${API_BASE}/groups/${CLOCKIN_GROUP_ID}/members/${userId}`, {
+    //   method: 'DELETE',
+    //   headers: { 'Authorization': `Basic ${TOKEN}` }
+    // });
+  }
+
+  // ===========================
+  //  MAIN HANDLER
+  // ===========================
+  async function handleClock(e) {
+    createRipple(e);
+
+    // prevent double-click
+    clockBtn.classList.add('loading');
+    clockBtn.disabled = true;
+
+    try {
+      if (!isClockedIn) {
+        // --- CLOCK IN ---
+        await staffbaseClockIn();
+        isClockedIn  = true;
+        clockInTime  = Date.now();
+        elapsedInterval = setInterval(updateElapsed, 1000);
+        updateElapsed();
+
+        statusPill.dataset.status = 'in';
+        statusText.textContent    = 'Clocked In';
+        clockBtn.dataset.action   = 'out';
+        clockBtn.querySelector('.btn-label').textContent = 'Clock Out';
+        elapsedSection.classList.add('visible');
+        document.body.className = 'clocked-in';
+        addLogEntry('in');
+
+      } else {
+        // --- CLOCK OUT ---
+        await staffbaseClockOut();
+        isClockedIn = false;
+        clearInterval(elapsedInterval);
+
+        statusPill.dataset.status = 'out';
+        statusText.textContent    = 'Clocked Out';
+        clockBtn.dataset.action   = 'in';
+        clockBtn.querySelector('.btn-label').textContent = 'Clock In';
+        elapsedSection.classList.remove('visible');
+        document.body.className = 'clocked-out';
+        addLogEntry('out');
+
+        clockInTime = null;
+      }
+    } catch (err) {
+      console.error('API error:', err);
+      alert('Something went wrong. Please try again.');
+    } finally {
+      clockBtn.classList.remove('loading');
+      clockBtn.disabled = false;
+    }
+  }
+</script>
+</body>
+</html>
