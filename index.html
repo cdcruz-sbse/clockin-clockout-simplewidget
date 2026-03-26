@@ -9,15 +9,15 @@
   *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
   :root {
-    --bg: #0e0f11;
-    --card: #161719;
-    --card-border: #232529;
-    --text-primary: #f0f0f2;
-    --text-secondary: #7a7d85;
-    --accent-in: #34d399;
-    --accent-in-dim: rgba(52, 211, 153, .12);
-    --accent-out: #f87171;
-    --accent-out-dim: rgba(248, 113, 113, .12);
+    --bg: #EFEFEF;
+    --card: #FFFFFF;
+    --card-border: #DCDCDC;
+    --text-primary: #3D3D3C;
+    --text-secondary: #8A8A89;
+    --accent: #EB204E;
+    --accent-dim: rgba(235, 32, 78, .10);
+    --neutral: #8A8A89;
+    --neutral-dim: rgba(138, 138, 137, .10);
     --radius: 20px;
     --transition: .35s cubic-bezier(.4, 0, .2, 1);
   }
@@ -41,16 +41,16 @@
     border-radius: 50%;
     top: 50%; left: 50%;
     transform: translate(-50%, -50%);
-    background: radial-gradient(circle, rgba(52,211,153,.06) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(235,32,78,.04) 0%, transparent 70%);
     pointer-events: none;
     transition: background var(--transition);
     z-index: 0;
   }
   body.clocked-in::before {
-    background: radial-gradient(circle, rgba(52,211,153,.10) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(235,32,78,.08) 0%, transparent 70%);
   }
   body.clocked-out::before {
-    background: radial-gradient(circle, rgba(248,113,113,.08) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(138,138,137,.05) 0%, transparent 70%);
   }
 
   /* ---- CARD ---- */
@@ -118,24 +118,24 @@
   }
 
   .status-pill[data-status="out"] {
-    background: var(--accent-out-dim);
-    color: var(--accent-out);
+    background: var(--neutral-dim);
+    color: var(--neutral);
   }
   .status-pill[data-status="out"] .dot {
-    background: var(--accent-out);
+    background: var(--neutral);
   }
   .status-pill[data-status="in"] {
-    background: var(--accent-in-dim);
-    color: var(--accent-in);
+    background: var(--accent-dim);
+    color: var(--accent);
   }
   .status-pill[data-status="in"] .dot {
-    background: var(--accent-in);
-    box-shadow: 0 0 8px rgba(52,211,153,.5);
+    background: var(--accent);
+    box-shadow: 0 0 8px rgba(235,32,78,.4);
     animation: pulse 2s ease-in-out infinite;
   }
   @keyframes pulse {
-    0%, 100% { box-shadow: 0 0 6px rgba(52,211,153,.4); }
-    50%      { box-shadow: 0 0 14px rgba(52,211,153,.7); }
+    0%, 100% { box-shadow: 0 0 6px rgba(235,32,78,.3); }
+    50%      { box-shadow: 0 0 14px rgba(235,32,78,.6); }
   }
 
 
@@ -159,20 +159,20 @@
   .clock-btn:active { transform: scale(.975); }
 
   .clock-btn[data-action="in"] {
-    background: var(--accent-in);
-    color: #052e1b;
-    box-shadow: 0 4px 24px rgba(52,211,153,.25);
+    background: var(--accent);
+    color: #FFFFFF;
+    box-shadow: 0 4px 24px rgba(235,32,78,.25);
   }
   .clock-btn[data-action="in"]:hover {
-    box-shadow: 0 6px 32px rgba(52,211,153,.35);
+    box-shadow: 0 6px 32px rgba(235,32,78,.35);
   }
   .clock-btn[data-action="out"] {
-    background: var(--accent-out);
-    color: #3b0a0a;
-    box-shadow: 0 4px 24px rgba(248,113,113,.2);
+    background: var(--text-primary);
+    color: #FFFFFF;
+    box-shadow: 0 4px 24px rgba(61,61,60,.2);
   }
   .clock-btn[data-action="out"]:hover {
-    box-shadow: 0 6px 32px rgba(248,113,113,.3);
+    box-shadow: 0 6px 32px rgba(61,61,60,.3);
   }
 
   /* ripple */
@@ -270,18 +270,6 @@
   updateClock();
 
   // ===========================
-  //  ELAPSED TIMER
-  // ===========================
-  function updateElapsed() {
-    if (!clockInTime) return;
-    const diff = Date.now() - clockInTime;
-    const hrs  = Math.floor(diff / 3600000).toString().padStart(2, '0');
-    const mins = Math.floor((diff % 3600000) / 60000).toString().padStart(2, '0');
-    const secs = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0');
-    elapsedTime.textContent = `${hrs}:${mins}:${secs}`;
-  }
-
-  // ===========================
   //  RIPPLE EFFECT
   // ===========================
   function createRipple(e) {
@@ -297,25 +285,6 @@
     ripple.addEventListener('animationend', () => ripple.remove());
   }
 
-  // ===========================
-  //  ADD LOG ENTRY
-  // ===========================
-  function addLogEntry(type) {
-    const now  = new Date();
-    const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
-    // clear "no entries" placeholder
-    const empty = logList.querySelector('.log-empty');
-    if (empty) empty.remove();
-
-    const li = document.createElement('li');
-    li.className = 'log-item';
-    li.innerHTML = `
-      <span class="tag ${type}">${type === 'in' ? 'In' : 'Out'}</span>
-      <span class="time-stamp">${time}</span>
-    `;
-    logList.prepend(li);
-  }
 
   // ===========================
   //  STAFFBASE API HOOKS
@@ -391,34 +360,24 @@
       if (!isClockedIn) {
         // --- CLOCK IN ---
         await staffbaseClockIn();
-        isClockedIn  = true;
-        clockInTime  = Date.now();
-        elapsedInterval = setInterval(updateElapsed, 1000);
-        updateElapsed();
+        isClockedIn = true;
 
         statusPill.dataset.status = 'in';
         statusText.textContent    = 'Clocked In';
         clockBtn.dataset.action   = 'out';
         clockBtn.querySelector('.btn-label').textContent = 'Clock Out';
-        elapsedSection.classList.add('visible');
         document.body.className = 'clocked-in';
-        addLogEntry('in');
 
       } else {
         // --- CLOCK OUT ---
         await staffbaseClockOut();
         isClockedIn = false;
-        clearInterval(elapsedInterval);
 
         statusPill.dataset.status = 'out';
         statusText.textContent    = 'Clocked Out';
         clockBtn.dataset.action   = 'in';
         clockBtn.querySelector('.btn-label').textContent = 'Clock In';
-        elapsedSection.classList.remove('visible');
         document.body.className = 'clocked-out';
-        addLogEntry('out');
-
-        clockInTime = null;
       }
     } catch (err) {
       console.error('API error:', err);
